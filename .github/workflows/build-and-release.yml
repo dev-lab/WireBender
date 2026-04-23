@@ -1,0 +1,152 @@
+name: Build and Release WireBender
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }} (${{ matrix.config }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [native, wasm]
+        config: [Release, Debug]
+
+    steps:
+      - name: Checkout WireBender
+        uses: actions/checkout@v4
+        with:
+          path: WireBender
+
+      - name: Checkout Adaptagrams (dev-lab fork)
+        uses: actions/checkout@v4
+        with:
+          repository: dev-lab/adaptagrams
+          ref: main
+          path: adaptagrams
+
+      - name: Setup Emscripten
+        if: matrix.target == 'wasm'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.51
+
+      - name: Configure and Build
+        run: |
+          mkdir -p WireBender/build-${{ matrix.target }}-${{ matrix.config }}
+          cd WireBender/build-${{ matrix.target }}-${{ matrix.config }}
+          
+          if [ "${{ matrix.target }}" = "wasm" ]; then
+            emcmake cmake .. -DADAPTAGRAMS_DIR=$GITHUB_WORKSPACE/adaptagrams -DWASM_DEBUG=${{ matrix.config == 'Debug' && 'ON' || 'OFF' }}
+          else
+            cmake .. -DADAPTAGRAMS_DIR=$GITHUB_WORKSPACE/adaptagrams -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+          fi
+          
+          cmake --build . --parallel $(nproc)
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: WireBender-${{ matrix.target }}-${{ matrix.config }}
+          path: |
+            WireBender/build-${{ matrix.target }}-${{ matrix.config }}/WireBender.js
+            WireBender/build-${{ matrix.target }}-${{ matrix.config }}/WireBender.wasm
+            WireBender/build-${{ matrix.target }}-${{ matrix.config }}/libWireBender.a
+            WireBender/build-${{ matrix.target }}-${{ matrix.config }}/*.o
+
+  deploy-pages:
+    name: Update GitHub Pages Index
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+        continue-on-error: true # Create if doesn't exist
+
+      - name: Download WASM Release Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: WireBender-wasm-Release
+          path: new_build
+
+      - name: Organize Folders and Generate Index
+        shell: python
+        run: |
+          import os
+          import shutil
+          from datetime import datetime
+
+          # 1. Setup paths
+          root = "gh-pages"
+          if not os.path.exists(root): os.makedirs(root)
+          
+          # Determine version name (wip or v1.x.x)
+          ref = "${{ github.ref }}"
+          version = "${{ github.ref_name }}" if ref.startswith("refs/tags/") else "wip"
+          
+          dest_dir = os.path.join(root, version)
+          if os.path.exists(dest_dir): shutil.rmtree(dest_dir)
+          shutil.copytree("new_build", dest_dir)
+
+          # 2. Update 'latest' if this is a tag
+          if ref.startswith("refs/tags/"):
+              latest_dir = os.path.join(root, "latest")
+              if os.path.exists(latest_dir): shutil.rmtree(latest_dir)
+              shutil.copytree("new_build", latest_dir)
+
+          # 3. Create .nojekyll
+          open(os.path.join(root, ".nojekyll"), "a").close()
+
+          # 4. Generate HTML Index
+          folders = sorted([d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))], reverse=True)
+          links_html = "".join([f'<li><a href="./{f}/WireBender.js">{f}</a> (Modified: {datetime.now().strftime("%Y-%m-%d %H:%M")})</li>' for f in folders])
+          
+          html_content = f"""
+          <html>
+          <head><title>WireBender WASM Index</title><style>body{{font-family:sans-serif;padding:40px;}}</style></head>
+          <body>
+            <h1>WireBender WASM Builds</h1>
+            <ul>{links_html}</ul>
+            <hr><p>Last updated: {datetime.now().isoformat()}</p>
+          </body>
+          </html>
+          """
+          with open(os.path.join(root, "index.html"), "w") as f:
+              f.write(html_content)
+
+      - name: Commit and Push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Deploy WireBender ${{ github.ref_name }} to Pages"
+          git push origin gh-pages
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            WireBender-*/*
+          generate_release_notes: true

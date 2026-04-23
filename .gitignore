@@ -1,0 +1,81 @@
+# ==========================================
+# CMake & Build Directories
+# ==========================================
+build/
+build*/
+out/
+bin/
+lib/
+
+# If someone accidentally runs `cmake .` in the root directory
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# ==========================================
+# C/C++ Compiled Artifacts
+# ==========================================
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.out
+*.app
+
+# ==========================================
+# WebAssembly / Emscripten Outputs
+# ==========================================
+# Ignore generated WASM binaries
+*.wasm
+# If you copy the generated JS module into root for testing
+WireBender.js
+WireBender.wasm
+
+# ==========================================
+# Project-Specific & Script Outputs
+# ==========================================
+# Output from your custom build/run scripts
+output.txt
+# Ignore a local adaptagrams clone if you ever put it in the project root
+adaptagrams/
+# Ignore NPM modules if you ever add a package.json for frontend testing
+node_modules/
+
+*.log
+
+# ==========================================
+# IDEs & Code Editors
+# ==========================================
+# VS Code
+.vscode/
+# CLion / IntelliJ
+.idea/
+cmake-build-*/
+# Vim
+*.swp
+*~
+# Visual Studio
+*.sln
+*.suo
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
