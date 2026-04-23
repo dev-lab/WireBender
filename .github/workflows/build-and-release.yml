@@ -40,7 +40,7 @@ jobs:
         with:
           version: 3.1.51
 
-      - name: Generate Adaptagrams config.h (Without Building)
+      - name: Generate Adaptagrams config.h
         run: |
           cd adaptagrams/cola
           autoreconf -i
@@ -84,7 +84,7 @@ jobs:
         with:
           ref: gh-pages
           path: gh-pages
-        continue-on-error: true # Create if doesn't exist
+        continue-on-error: true
 
       - name: Download WASM Release Artifact
         uses: actions/download-artifact@v4
@@ -99,38 +99,71 @@ jobs:
           import shutil
           from datetime import datetime
 
-          # 1. Setup paths
           root = "gh-pages"
           if not os.path.exists(root): os.makedirs(root)
           
-          # Determine version name (wip or v1.x.x)
           ref = "${{ github.ref }}"
           version = "${{ github.ref_name }}" if ref.startswith("refs/tags/") else "wip"
           
+          # 1. Save the new build
           dest_dir = os.path.join(root, version)
           if os.path.exists(dest_dir): shutil.rmtree(dest_dir)
           shutil.copytree("new_build", dest_dir)
 
-          # 2. Update 'latest' if this is a tag
+          # 2. Update 'latest' for tags
           if ref.startswith("refs/tags/"):
               latest_dir = os.path.join(root, "latest")
               if os.path.exists(latest_dir): shutil.rmtree(latest_dir)
               shutil.copytree("new_build", latest_dir)
 
-          # 3. Create .nojekyll
+          # 3. Security/Config files
           open(os.path.join(root, ".nojekyll"), "a").close()
 
-          # 4. Generate HTML Index
-          folders = sorted([d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))], reverse=True)
-          links_html = "".join([f'<li><a href="./{f}/WireBender.js">{f}</a> (Modified: {datetime.now().strftime("%Y-%m-%d %H:%M")})</li>' for f in folders])
+          # 4. Generate HTML Index (Filtered)
+          folders = []
+          for d in os.listdir(root):
+              path = os.path.join(root, d)
+              # Ignore hidden folders (like .git) and files
+              if not d.startswith('.') and os.path.isdir(path):
+                  # Ensure it's actually a build folder
+                  if os.path.exists(os.path.join(path, "WireBender.js")):
+                      folders.append(d)
+          
+          # Sort: latest first, then wip, then tags in reverse
+          folders.sort(reverse=True)
+          if 'wip' in folders:
+              folders.remove('wip')
+              folders.insert(0, 'wip')
+          if 'latest' in folders:
+              folders.remove('latest')
+              folders.insert(0, 'latest')
+
+          links = []
+          for f in folders:
+              mtime = datetime.fromtimestamp(os.path.getmtime(os.path.join(root, f)))
+              links.append(f'<li><strong><a href="./{f}/WireBender.js">{f}</a></strong> — <i>{mtime.strftime("%Y-%m-%d %H:%M")}</i></li>')
           
           html_content = f"""
+          <!DOCTYPE html>
           <html>
-          <head><title>WireBender WASM Index</title><style>body{{font-family:sans-serif;padding:40px;}}</style></head>
+          <head>
+            <title>WireBender WASM Index</title>
+            <style>
+              body {{ font-family: -apple-system, sans-serif; line-height: 1.6; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; }}
+              h1 {{ border-bottom: 2px solid #eee; padding-bottom: 10px; }}
+              ul {{ list-style: none; padding: 0; }}
+              li {{ background: #f9f9f9; margin-bottom: 8px; padding: 12px; border-radius: 6px; border: 1px solid #eee; }}
+              a {{ color: #0366d6; text-decoration: none; }}
+              a:hover {{ text-decoration: underline; }}
+              code {{ background: #eee; padding: 2px 4px; border-radius: 4px; }}
+            </style>
+          </head>
           <body>
             <h1>WireBender WASM Builds</h1>
-            <ul>{links_html}</ul>
-            <hr><p>Last updated: {datetime.now().isoformat()}</p>
+            <p>Load via: <code>import WireBenderModule from 'https://dev-lab.github.io/WireBender/[version]/WireBender.js'</code></p>
+            <ul>{"".join(links)}</ul>
+            <hr>
+            <p style="font-size: 0.8em; color: #666;">Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} UTC</p>
           </body>
           </html>
           """
@@ -143,7 +176,7 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "Deploy WireBender ${{ github.ref_name }} to Pages"
+          git commit -m "Deploy WireBender ${{ github.ref_name }} to Pages" || echo "No changes to commit"
           git push origin gh-pages
 
   release:
