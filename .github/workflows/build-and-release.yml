@@ -40,6 +40,16 @@ jobs:
         with:
           version: 3.1.51
 
+      - name: Generate Adaptagrams config.h (Without Building)
+        run: |
+          cd adaptagrams/cola
+          autoreconf -i
+          if [ "${{ matrix.target }}" = "wasm" ]; then
+            emconfigure ./configure
+          else
+            ./configure
+          fi
+
       - name: Configure and Build
         run: |
           mkdir -p WireBender/build-${{ matrix.target }}-${{ matrix.config }}
