@@ -192,7 +192,7 @@ jobs:
           git commit -m "Deploy WireBender ${{ github.ref_name }} to Pages" || echo "No changes to commit"
           git push origin gh-pages
 
-release:
+  release:
     name: Create GitHub Release
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
