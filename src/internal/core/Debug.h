@@ -35,9 +35,7 @@ inline std::ostream g_nullStream(&g_nullBuf);
 } // namespace bend
 
 #ifndef WB_DEBUG
-#ifdef NDEBUG
-#define WB_DEBUG 0
-#else
+#ifndef NDEBUG
 #define WB_DEBUG 1
 #endif
 #endif
