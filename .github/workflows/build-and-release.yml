@@ -105,6 +105,11 @@ jobs:
           ref = "${{ github.ref }}"
           version = "${{ github.ref_name }}" if ref.startswith("refs/tags/") else "wip"
           
+          # --- NEW: Freeze the exact build time into a text file ---
+          current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+          with open(os.path.join("new_build", "build_time.txt"), "w") as f:
+              f.write(current_time_str)
+
           # 1. Save the new build
           dest_dir = os.path.join(root, version)
           if os.path.exists(dest_dir): shutil.rmtree(dest_dir)
@@ -123,9 +128,7 @@ jobs:
           folders = []
           for d in os.listdir(root):
               path = os.path.join(root, d)
-              # Ignore hidden folders (like .git) and files
               if not d.startswith('.') and os.path.isdir(path):
-                  # Ensure it's actually a build folder
                   if os.path.exists(os.path.join(path, "WireBender.js")):
                       folders.append(d)
           
@@ -140,8 +143,18 @@ jobs:
 
           links = []
           for f in folders:
-              mtime = datetime.fromtimestamp(os.path.getmtime(os.path.join(root, f)))
-              links.append(f'<li><strong><a href="./{f}/WireBender.js">{f}</a></strong> — <i>{mtime.strftime("%Y-%m-%d %H:%M")}</i></li>')
+              time_str = "Unknown"
+              time_file = os.path.join(root, f, "build_time.txt")
+              
+              # --- NEW: Read the frozen time, fallback to filesystem if missing ---
+              if os.path.exists(time_file):
+                  with open(time_file, "r") as tf:
+                      time_str = tf.read().strip()
+              else:
+                  mtime = datetime.fromtimestamp(os.path.getmtime(os.path.join(root, f)))
+                  time_str = mtime.strftime("%Y-%m-%d %H:%M")
+              
+              links.append(f'<li><strong><a href="./{f}/WireBender.js">{f}</a></strong> — <i>{time_str}</i></li>')
           
           html_content = f"""
           <!DOCTYPE html>
