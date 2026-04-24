@@ -192,17 +192,44 @@ jobs:
           git commit -m "Deploy WireBender ${{ github.ref_name }} to Pages" || echo "No changes to commit"
           git push origin gh-pages
 
-  release:
+release:
     name: Create GitHub Release
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: all_artifacts
+
+      - name: Package Assets into Zips
+        run: |
+          mkdir release_assets
+          for dir in all_artifacts/WireBender-*; do
+            # Extract target (wasm/native) and config (Release/Debug)
+            # Folder format: WireBender-native-Release
+            target=$(echo "$(basename "$dir")" | cut -d'-' -f2)
+            config=$(echo "$(basename "$dir")" | cut -d'-' -f3)
+            
+            zip_name="WireBender-${target}-${config}.zip"
+            echo "Packaging $zip_name..."
+            
+            cd "$dir"
+            if [ "$target" = "wasm" ]; then
+              # WASM: Just the loader and the binary
+              zip -j "../../release_assets/$zip_name" WireBender.js WireBender.wasm
+            else
+              # Native: The static library plus all objects recursively
+              # We use find to catch all .o files in subdirectories
+              find . -name "*.a" -o -name "*.o" | zip "../../release_assets/$zip_name" -@
+            fi
+            cd ../..
+          done
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            WireBender-*/*
+            release_assets/*.zip
           generate_release_notes: true
