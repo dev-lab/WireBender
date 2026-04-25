@@ -68,7 +68,7 @@ private:
 			const auto& r = conn.getPoints();
 			std::vector<Avoid::Point> pts(r.begin(), r.end());
 			bend::ConnectorEnd from(conn, true);
-			bend::ConnectorEnd to(conn, true);
+			bend::ConnectorEnd to(conn, false);
 			if(pts.empty()) {
 				pts.push_back(from.getEndPoint());
 				pts.push_back(to.getEndPoint());

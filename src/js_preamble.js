@@ -13,29 +13,47 @@
  * const wb = new Module.WireBender();
  *
  * // Component origin (0,0) is the center of its bounding box.
- * wb.addComponent({ id: 'U1', width: 80, height: 60, padding: 16, pins:[
- *	 { number: 1, name: 'VCC', x: -20, y: -30, directionFlags: Module.PinDirection.DirUp },
- *	 { number: 2, name: 'GND', x:  20, y:  30, directionFlags: Module.PinDirection.DirDown },
- *	 { number: 3, name: 'IN',  x: -40, y:	0, directionFlags: Module.PinDirection.DirLeft },
- *	 { number: 4, name: 'OUT', x:  40, y:	0, directionFlags: Module.PinDirection.DirRight },
- * ]});
+ * // pins must be a VectorPinDescriptor — plain JS arrays will throw a BindingError.
+ * const pins = new Module.VectorPinDescriptor();
+ * pins.push_back({ number: 1, name: 'VCC', x: -20, y: -30, directionFlags: Module.PinDirection.DirUp });
+ * pins.push_back({ number: 2, name: 'GND', x:	20, y:	30, directionFlags: Module.PinDirection.DirDown });
+ * pins.push_back({ number: 3, name: 'IN',	x: -40, y:	 0, directionFlags: Module.PinDirection.DirLeft });
+ * pins.push_back({ number: 4, name: 'OUT', x:	40, y:	 0, directionFlags: Module.PinDirection.DirRight });
+ * wb.addComponent({ id: 'U1', width: 80, height: 60, padding: 16, pins });
+ * pins.delete();
  *
- * wb.addNet({ name: 'VCC', pins:[{ componentId: 'U1', pinNumber: 1 }, ...] });
+ * // pins for nets must be a VectorPinRef.
+ * const netPins = new Module.VectorPinRef();
+ * netPins.push_back({ componentId: 'U1', pinNumber: 1 });
+ * wb.addNet({ name: 'VCC', pins: netPins });
+ * netPins.delete();
  *
- * const classification = wb.classify();	  // auto-detect buses
- * wb.applyClassification(classification);	  // or modify first
+ * const classification = wb.classify();   // returns VectorNetClassification
+ * wb.applyClassification(classification);
+ * classification.delete();
  *
  * const placements = wb.computePlacements(); // automatic layout
- * const routes	   = wb.routeAll();			  // route all nets
+ * placements.delete();
+ * const routes = wb.routeAll();			 // route all nets
+ *
+ * // All vector fields in results are Emscripten vectors — iterate with size()/get(i).
+ * for (let i = 0; i < routes.wires.size(); i++) {
+ *	 const wire = routes.wires.get(i);
+ *	 // wire.net (string), wire.points (VectorPoint2D)
+ * }
  *
  * // During interactive drag:
- * const delta = wb.moveComponent('U1', {position: { x: 200, y: 150 }, transform: {rotation: 0, flipX: false}});
- * // delta.affectedNets — which nets changed
- * // delta.routes.wires — updated wire polylines for those nets
+ * const delta = wb.moveComponent('U1', { position: { x: 200, y: 150 }, transform: { rotation: 0, flipX: false } });
+ * // delta.affectedNets — VectorString: which nets changed
+ * // delta.routes.wires — VectorWire: updated wire polylines for those nets
  *
  * // ── PCB pad visualisation ────────────────────────────────────────────────
  * const pcb = new Module.PcbVisualizer();
- * pcb.addNet({ name: 'VCC', pads:[{ x: 10, y: 20 }, { x: 50, y: 80 }] });
+ * const pads = new Module.VectorPoint2D();
+ * pads.push_back({ x: 10, y: 20 });
+ * pads.push_back({ x: 50, y: 80 });
+ * pcb.addNet({ name: 'VCC', pads });
+ * pads.delete();
  * const pcbRoutes = pcb.route();
  */
 
@@ -86,8 +104,8 @@
 /**
  * Component placement.
  * @typedef	 {Object} Placement
- * @property {Point2D} 		position
- * @property {Transform} 	transform
+ * @property {Point2D}		position
+ * @property {Transform}	transform
  */
 
 /**
@@ -117,7 +135,7 @@
  */
 
 /**
- * Component placements container, used in {@link WireBender#computePlacements}, {@link WireBender#setLockedPlaceemnts}.
+ * Component placements container, used in {@link WireBender#computePlacements}, {@link WireBender#setLockedPlacements}.
  * @typedef	 {Object} ComponentPlacements
  * @property {(id: string, placement: Placement) => void} set		- set placement for component ID
  * @property {(id: string) => Placement} get						- returns placement for component ID
@@ -163,9 +181,9 @@
  * @typedef	 {Object}  ComponentLabelHint
  * @property {string}  componentId
  * @property {Point2D} refPosition		 - Centre anchor for the reference designator.
- * @property {boolean} refIsVertical     - Show ref label vertically.
- * @property {Point2D} valuePosition     - Centre anchor for the value / part-number label.
- * @property {boolean} valueIsVertical   - Show value label vertically.
+ * @property {boolean} refIsVertical	 - Show ref label vertically.
+ * @property {Point2D} valuePosition	 - Centre anchor for the value / part-number label.
+ * @property {boolean} valueIsVertical	 - Show value label vertically.
  */
 
 /**
@@ -194,7 +212,7 @@
  * @typedef	 {Object} PinMap
  * @property {(oldPin: number, newPin: number) => void} set		- set pin numbers mapping
  * @property {(oldPin: number) => number} get					- returns replacement pin number
- * @property {() => Object<number, number>} toObject 			- Converts to plain JS object.
+ * @property {() => Object<number, number>} toObject			- Converts to plain JS object.
  * @property {(obj: Object<number, number>) => void} fromObject	- Replaces contents from plain JS object.
  */
 
@@ -230,7 +248,7 @@
  * Workflow:
  * 1. {@link WireBender#addComponent} / {@link WireBender#addNet} — describe the netlist.
  * 2. {@link WireBender#classify} + {@link WireBender#applyClassification} — net classification.
- * 3. {@link WireBender#setLockedPlacement} + {@link WireBender#computePlacement} + {@link WireBender#setPlacements} — automatic component placement.
+ * 3. {@link WireBender#setLockedPlacements} + {@link WireBender#computePlacements} + {@link WireBender#setPlacements} — automatic component placement.
  * 4. {@link WireBender#routeAll} — route all nets.
  * 5. {@link WireBender#moveComponent} — incremental re-route during interactive drag/rotation.
  * 6. {@link WireBender#replaceComponent} — swap component geometry (e.g. library resolution).

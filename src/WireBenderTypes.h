@@ -44,9 +44,8 @@ enum PinDirection : int {
 struct PinDescriptor {
 	int number;		  // immutable integer identity used for net connections and pin mapping
 	std::string name; // optional label ("Gate", "VCC", ""); may be ""
-	// TODO: replace to Point2D
-	double x = 0.0;				 // x position in component-local coordinates: 0 - center of the component box // TODO: left-top coord!
-	double y = 0.0;				 // y position in component-local coordinates: 0 - center of the component box // TODO: left-top coord!
+	double x = 0.0;				 // x position in component-local coordinates: 0 - center of the component box
+	double y = 0.0;				 // y position in component-local coordinates: 0 - center of the component box
 	int directionFlags = DirAll; // pin direction flags
 };
 

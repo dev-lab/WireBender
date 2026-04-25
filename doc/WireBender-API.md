@@ -23,9 +23,65 @@ All classes and types are accessed via `Module.*`.
 
 ## Data Structures and Memory
 
-In the updated API, most data structures (like arrays of pins, nets, wires, and route results) automatically map to **standard JavaScript arrays and objects**. You no longer need to use Emscripten vectors for these standard types.
+Scalar fields (`number`, `string`, `boolean`) and plain structs (`Point2D`, `Placement`, `Transform`, `PinDescriptor`, `PinRef`, etc.) marshal transparently as plain JS objects across the WASM boundary.
 
-However, certain top-level classes (`WireBender`, `PcbVisualizer`, `ComponentPlacements`, `PinMap`) cross the WASM boundary as stateful C++ objects. You must manually manage their memory by calling `.delete()` when they are no longer needed.
+**Arrays do not.** Every field typed as a sequence — whether passed in or returned — is an **Emscripten vector proxy**, not a JS array. Plain JS arrays will throw a `BindingError` at runtime. The registered vector types are:
+
+| WASM type | Element type | Used for |
+|---|---|---|
+| `Module.VectorPinDescriptor` | `PinDescriptor` | `ComponentDescriptor.pins` (input) |
+| `Module.VectorPinRef` | `PinRef` | `NetDescriptor.pins` (input) |
+| `Module.VectorPoint2D` | `Point2D` | `PcbNet.pads` (input), `Wire.points` (output) |
+| `Module.VectorWire` | `Wire` | Route result `wires` (output) |
+| `Module.VectorJunctionDot` | `JunctionDot` | Route result `junctions` (output) |
+| `Module.VectorNetLabelHint` | `NetLabelHint` | Route result `netLabels` (output) |
+| `Module.VectorComponentLabelHint` | `ComponentLabelHint` | Route result `componentLabels` (output) |
+| `Module.VectorNetClassification` | `NetClassification` | `classify()` return value |
+| `Module.VectorString` | `string` | `IncrementalRouteResult.affectedNets` (output) |
+
+**Building an input vector:**
+```js
+const pins = new Module.VectorPinDescriptor();
+pins.push_back({ number: 1, name: 'VCC', x: 0, y: -30, directionFlags: Module.PinDirection.DirUp });
+pins.push_back({ number: 2, name: 'GND', x: 0, y:  30, directionFlags: Module.PinDirection.DirDown });
+wb.addComponent({ id: 'U1', width: 80, height: 60, padding: 16, pins });
+pins.delete();  // free C++ memory immediately after the call
+```
+
+**Reading an output vector:**
+```js
+const result = wb.routeAll();
+for (let i = 0; i < result.wires.size(); i++) {
+  const wire = result.wires.get(i);    // Wire — value_object, no delete needed
+  for (let j = 0; j < wire.points.size(); j++) {
+    const p = wire.points.get(j);      // Point2D — { x, y }
+  }
+}
+```
+
+**Memory rules for vectors:**
+
+- **Input vectors** (`VectorPinDescriptor`, `VectorPinRef`, `VectorPoint2D` for `pads`): allocate with `new`, call `.delete()` immediately after passing to the API.
+- **`VectorNetClassification`** returned by `classify()`: treat as an input vector — call `.delete()` after passing to `applyClassification()`.
+- **Output vectors** embedded in `value_object` results (`SchematicRouteResult`, `IncrementalRouteResult`, `PcbRouteResult`): these are JS-side value copies; **do not call `.delete()`** on them or their fields.
+- **Stateful C++ classes** (`WireBender`, `PcbVisualizer`, `ComponentPlacements`, `PinMap`): call `.delete()` when the session ends.
+
+**Recommended helper utilities:**
+```js
+/** Convert a JS array to an Emscripten vector. Caller must .delete() the result. */
+function toVector(VectorClass, items) {
+  const v = new VectorClass();
+  for (const item of items) v.push_back(item);
+  return v;
+}
+
+/** Copy an Emscripten output vector to a plain JS array for easier processing. */
+function fromVector(vec) {
+  const arr = [];
+  for (let i = 0; i < vec.size(); i++) arr.push(vec.get(i));
+  return arr;
+}
+```
 
 ---
 
@@ -92,11 +148,11 @@ Values are bit flags; combine with `|` for multiple directions.
 ### `ComponentDescriptor`
 ```js
 {
-  id:      string,                 // unique identifier e.g. "U1", "R3"
+  id:      string,                       // unique identifier e.g. "U1", "R3"
   width:   number,
   height:  number,
-  padding: number,                 // routing clearance, default 16
-  pins:    PinDescriptor[]         // standard JS array
+  padding: number,                       // routing clearance, default 16
+  pins:    VectorPinDescriptor           // Emscripten vector — NOT a plain JS array
 }
 ```
 
@@ -109,7 +165,7 @@ Values are bit flags; combine with `|` for multiple directions.
 ```js
 {
   name: string,
-  pins: PinRef[]                   // standard JS array
+  pins: VectorPinRef                     // Emscripten vector — NOT a plain JS array
 }
 ```
 
@@ -137,11 +193,11 @@ cp.delete();
 
 ### `Wire`
 ```js
-{ net: string, points: Point2D[] }
+{ net: string, points: VectorPoint2D }
 ```
-`points` is an ordered polyline. Each consecutive pair of points is one wire
-segment. All points are guaranteed to be orthogonal (horizontal or vertical
-segments only). Points at junctions are snapped to the junction centre.
+`points` is an ordered polyline (Emscripten vector). Each consecutive pair of points is one wire
+segment. All segments are orthogonal (horizontal or vertical only). Points at junctions are
+snapped to the junction centre. Iterate with `.size()` / `.get(i)`.
 
 ### `JunctionDot`
 ```js
@@ -180,34 +236,26 @@ without a separate collision pass. Both positions are world-space centre anchors
 ### `SchematicRouteResult`
 ```js
 {
-  wires:           Wire[],
-  junctions:       JunctionDot[],
-  netLabels:       NetLabelHint[],
-  componentLabels: ComponentLabelHint[]
+  wires:           VectorWire,                // iterate: .size() / .get(i)
+  junctions:       VectorJunctionDot,         // iterate: .size() / .get(i)
+  netLabels:       VectorNetLabelHint,        // iterate: .size() / .get(i)
+  componentLabels: VectorComponentLabelHint   // iterate: .size() / .get(i)
 }
 ```
+Returned by `routeAll()` and `replaceComponent()`. This is a value-copy result — **do not call
+`.delete()`** on it or on any of its vector fields.
 
 ### `IncrementalRouteResult`
 ```js
 {
-  affectedNets: string[],              // names of re-routed nets
+  affectedNets: VectorString,          // Emscripten vector of strings — iterate: .size() / .get(i)
   routes:       SchematicRouteResult   // wires/junctions for those nets only
 }
 ```
 Partial routing result from `moveComponent()`. Contains only the nets connected to the moved component.
 `routes.componentLabels` contains exactly one entry — the updated hint for
 the moved component. Merge it into the full result by replacing the entry
-whose `componentId` matches.
-
-### `ValidationResult`
-```js
-{
-  hasSegmentOverlap:      boolean,
-  hasFixedSegmentOverlap: boolean,
-  hasInvalidPaths:        boolean,
-  crossingCount:          number
-}
-```
+whose `componentId` matches. Do not call `.delete()` on this result or its fields.
 
 ### `PinMap` (class with methods)
 ```js
@@ -233,13 +281,17 @@ as removed. New pin numbers not appearing as values must be wired up via
 
 ### `PcbNet`
 ```js
-{ name: string, pads: Point2D[] }
+{ name: string, pads: VectorPoint2D }  // pads: Emscripten vector — NOT a plain JS array
 ```
 
 ### `PcbRouteResult`
 ```js
-{ wires: Wire[], junctions: JunctionDot[] }
+{
+  wires:     VectorWire,        // iterate: .size() / .get(i)
+  junctions: VectorJunctionDot  // iterate: .size() / .get(i)
+}
 ```
+Returned by `pcb.route()`. Value-copy result — **do not call `.delete()`** on it or its fields.
 
 ---
 
@@ -258,32 +310,30 @@ wb.delete();   // free C++ memory when done
 
 #### `wb.addComponent(descriptor)`
 Add or replace a component. Pin positions are in component-local coordinates,
-with (0,0) as the center.
+with (0,0) as the center. The `pins` field must be a `VectorPinDescriptor`; delete it
+after the call.
 
 ```js
-wb.addComponent({
-  id: 'U1', width: 80, height: 60, padding: 16,
-  pins:[
-    { number: 1, name: 'VCC', x: -20, y: -30, directionFlags: Module.PinDirection.DirUp },
-    { number: 2, name: 'GND', x:  20, y:  30, directionFlags: Module.PinDirection.DirDown },
-    { number: 3, name: 'IN',  x: -40, y:   0, directionFlags: Module.PinDirection.DirLeft },
-    { number: 4, name: 'OUT', x:  40, y:   0, directionFlags: Module.PinDirection.DirRight }
-  ]
-});
+const pins = new Module.VectorPinDescriptor();
+pins.push_back({ number: 1, name: 'VCC', x: -20, y: -30, directionFlags: Module.PinDirection.DirUp });
+pins.push_back({ number: 2, name: 'GND', x:  20, y:  30, directionFlags: Module.PinDirection.DirDown });
+pins.push_back({ number: 3, name: 'IN',  x: -40, y:   0, directionFlags: Module.PinDirection.DirLeft });
+pins.push_back({ number: 4, name: 'OUT', x:  40, y:   0, directionFlags: Module.PinDirection.DirRight });
+wb.addComponent({ id: 'U1', width: 80, height: 60, padding: 16, pins });
+pins.delete();
 ```
 
 #### `wb.addNet(descriptor)`
-Add or replace a net. Pins are referenced by `(componentId, pinNumber)`.
+Add or replace a net. Pins are referenced by `(componentId, pinNumber)`. The `pins` field must
+be a `VectorPinRef`; delete it after the call.
 
 ```js
-wb.addNet({
-  name: 'VCC',
-  pins:[
-    { componentId: 'U1', pinNumber: 1 },
-    { componentId: 'U2', pinNumber: 1 },
-    { componentId: 'U3', pinNumber: 1 }
-  ]
-});
+const pins = new Module.VectorPinRef();
+pins.push_back({ componentId: 'U1', pinNumber: 1 });
+pins.push_back({ componentId: 'U2', pinNumber: 1 });
+pins.push_back({ componentId: 'U3', pinNumber: 1 });
+wb.addNet({ name: 'VCC', pins });
+pins.delete();
 ```
 
 #### `wb.clear()`
@@ -296,25 +346,34 @@ Remove all components and nets, reset to empty state.
 The library auto-detects power buses (VCC, GND, etc.) using a statistical
 outlier heuristic on pin counts. Review and optionally override before routing.
 
-#### `wb.classify()` → `NetClassification[]`
+#### `wb.classify()` → `VectorNetClassification`
+
+Returns a `VectorNetClassification` (Emscripten vector). Iterate with `.size()` / `.get(i)`.
+Modify entries by index, then pass back to `applyClassification()`. Call `.delete()` afterwards.
 
 ```js
 const cls = wb.classify();
-for (const c of cls) {
+for (let i = 0; i < cls.size(); i++) {
+  const c = cls.get(i);
   console.log(c.name, c.isBus ? 'bus' : 'signal', 'level:', c.busLevel);
 }
 ```
 
 #### `wb.applyClassification(cls)`
-Return the (possibly modified) classification array. Must be called before
-`computePlacements()`.
+Pass the (possibly modified) `VectorNetClassification` back to the library. Must be called before
+`computePlacements()`. Call `.delete()` on the vector after this call.
 
 ```js
 // Example: force RST to be treated as a signal, not a bus
-for (const c of cls) {
-  if (c.name === 'RST') c.isBus = false;
+for (let i = 0; i < cls.size(); i++) {
+  const c = cls.get(i);
+  if (c.name === 'RST') {
+    // value_object fields are read-only through get() — rebuild the entry
+    cls.set(i, { ...c, isBus: false, busLevel: -1 });
+  }
 }
 wb.applyClassification(cls);
+cls.delete();
 ```
 
 **Bus rail layout:**
@@ -373,34 +432,60 @@ Locks apply **only to `computePlacements()`** — they have no effect on
    `computePlacements()` again — only the new components are placed, everything
    else stays where the user put it.
 
+#### `wb.setComponentPlacement(componentId, placement)`
+Override the placement of one component. Takes effect on the next `routeAll()` or `moveComponent()` call.
+
+```js
+wb.setComponentPlacement('U1', {
+  position: { x: 200, y: 150 },
+  transform: { rotation: 90, flipX: false }
+});
+```
+
+#### `wb.setPlacements(placements)`
+Override the placements for many components at once. Takes effect on the next `routeAll()` or `moveComponent()` call.
+
+```js
+const p = new Module.ComponentPlacements();
+p.set('U1', { position: { x: 200, y: 150 }, transform: { rotation: 0, flipX: false } });
+p.set('U2', { position: { x: 400, y: 150 }, transform: { rotation: 0, flipX: false } });
+wb.setPlacements(p);
+p.delete();
+```
+
 ---
 
 ### Step 4 — Route all nets
 
 #### `wb.routeAll()` → `SchematicRouteResult`
 Routes all nets using the current component placements and classification.
-Must be called after `computePlacements()`.
+Must be called after `computePlacements()`. All fields of the returned result are Emscripten
+vectors; iterate with `.size()` / `.get(i)`. Do not call `.delete()` on the result or its fields.
 
 ```js
 const result = wb.routeAll();
 
 // Draw wires
-for (const wire of result.wires) {
+for (let i = 0; i < result.wires.size(); i++) {
+  const wire = result.wires.get(i);
   ctx.beginPath();
-  wire.points.forEach((p, index) => {
-    index === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-  });
+  for (let j = 0; j < wire.points.size(); j++) {
+    const p = wire.points.get(j);
+    j === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  }
   ctx.stroke();
 }
 
 // Draw junction dots
-for (const d of result.junctions) {
+for (let i = 0; i < result.junctions.size(); i++) {
+  const d = result.junctions.get(i);
   ctx.arc(d.position.x, d.position.y, 4, 0, Math.PI * 2);
   ctx.fill();
 }
 
 // Draw net labels (optional)
-for (const l of result.netLabels) {
+for (let i = 0; i < result.netLabels.size(); i++) {
+  const l = result.netLabels.get(i);
   ctx.fillText(l.net, l.position.x, l.position.y);
 }
 ```
@@ -426,11 +511,14 @@ const delta = wb.moveComponent('U1', {
   transform: { rotation: 0, flipX: false } 
 });
 
-// Which nets changed?
-const affected = delta.affectedNets; // e.g. ["VCC", "SIG"]
+// Which nets changed? (VectorString)
+for (let i = 0; i < delta.affectedNets.size(); i++) {
+  console.log('re-routed:', delta.affectedNets.get(i));
+}
 
-// Updated wires for the affected nets only
-for (const wire of delta.routes.wires) {
+// Updated wires for the affected nets only (VectorWire)
+for (let i = 0; i < delta.routes.wires.size(); i++) {
+  const wire = delta.routes.wires.get(i);
   // replace this net's wires in your render state
 }
 ```
@@ -489,46 +577,44 @@ KiCad) and its pin geometry changes.
 ```js
 // Old component: 3-pin rectangle with pins 1, 2, 3
 // New component: NPN transistor — KiCad numbering maps differently
-// Old pin 1 (Base)     → new pin 2
+// Old pin 1 (Base)      → new pin 2
 // Old pin 2 (Collector) → new pin 3
-// Old pin 3 (Emitter)  → new pin 1
+// Old pin 3 (Emitter)   → new pin 1
 
 const pinMap = new Module.PinMap();
 pinMap.set(1, 2);
 pinMap.set(2, 3);
 pinMap.set(3, 1);
 
+const newPins = new Module.VectorPinDescriptor();
+newPins.push_back({ number: 1, name: 'E', x:   0, y:  30, directionFlags: Module.PinDirection.DirDown });
+newPins.push_back({ number: 2, name: 'B', x: -40, y:   0, directionFlags: Module.PinDirection.DirLeft });
+newPins.push_back({ number: 3, name: 'C', x:   0, y: -30, directionFlags: Module.PinDirection.DirUp });
+
 const result = wb.replaceComponent({
   componentId: 'Q1',
-  newDescriptor: {
-    id: 'Q1', width: 80, height: 60, padding: 16,
-    pins:[
-      { number: 1, name: 'E', x:   0, y:  30, directionFlags: Module.PinDirection.DirDown },
-      { number: 2, name: 'B', x: -40, y:   0, directionFlags: Module.PinDirection.DirLeft },
-      { number: 3, name: 'C', x:   0, y: -30, directionFlags: Module.PinDirection.DirUp }
-    ]
-  },
+  newDescriptor: { id: 'Q1', width: 80, height: 60, padding: 16, pins: newPins },
   pinMapping: pinMap,
 });
 
+newPins.delete();
 pinMap.delete();
 // result is a full SchematicRouteResult — re-render everything
 ```
 
 ---
 
-### Validation
+### Diagnostics
 
-#### `wb.validate()` → `ValidationResult`
+#### `wb.printRoutingStats()` → `boolean`
 
-Only meaningful after `routeAll()` or `moveComponent()`. Returns diagnostic
-counts. `crossingCount > 0` means wires from different nets cross; the router
-minimises crossings but cannot always eliminate them for complex netlists.
+Prints diagnostic information about the current routing state to the console output.
+Only meaningful after `routeAll()` or `moveComponent()`. Returns `true` if the
+routing state is consistent, `false` if problems were detected.
 
 ```js
-const v = wb.validate();
-if (v.hasSegmentOverlap)  console.warn('wire overlap detected');
-if (v.crossingCount > 0)  console.warn(`${v.crossingCount} crossings`);
+const ok = wb.printRoutingStats();
+if (!ok) console.warn('routing diagnostics reported problems — check console output');
 ```
 
 ---
@@ -544,16 +630,15 @@ const pcb = new Module.PcbVisualizer();
 ```
 
 #### `pcb.addNet(net)`
+The `pads` field must be a `VectorPoint2D`; delete it after the call.
 
 ```js
-pcb.addNet({
-  name: 'VCC',
-  pads:[
-    { x: 120, y: 340 },
-    { x: 450, y: 280 },
-    { x: 230, y: 510 }
-  ]
-});
+const pads = new Module.VectorPoint2D();
+pads.push_back({ x: 120, y: 340 });
+pads.push_back({ x: 450, y: 280 });
+pads.push_back({ x: 230, y: 510 });
+pcb.addNet({ name: 'VCC', pads });
+pads.delete();
 ```
 
 #### `pcb.route()` → `PcbRouteResult`
@@ -561,10 +646,16 @@ pcb.addNet({
 ```js
 const result = pcb.route();
 
-for (const wire of result.wires) {
+for (let i = 0; i < result.wires.size(); i++) {
+  const wire = result.wires.get(i);
   // Draw the wire polyline for wire.net
+  for (let j = 0; j < wire.points.size(); j++) {
+    const p = wire.points.get(j);
+    // use p.x, p.y
+  }
 }
-for (const d of result.junctions) {
+for (let i = 0; i < result.junctions.size(); i++) {
+  const d = result.junctions.get(i);
   // Draw junction dot at d.position
 }
 ```
@@ -582,54 +673,64 @@ const M = await WireBenderModule({ locateFile: f => f });
 
 const wb = new M.WireBender();
 
-// ── 1. Components ────────────────────────────────────────────────────────────
-
+// Helper: build a VectorPinDescriptor from a plain JS array and pass it to addComponent.
 function addComp(id, w, h, pinDefs) {
-  wb.addComponent({ id, width: w, height: h, padding: 16, pins: pinDefs });
+  const pins = new M.VectorPinDescriptor();
+  for (const pd of pinDefs) pins.push_back(pd);
+  wb.addComponent({ id, width: w, height: h, padding: 16, pins });
+  pins.delete();
 }
 
-addComp('U1', 80, 60,[
+// Helper: build a VectorPinRef from a plain JS array and pass it to addNet.
+function addNet(name, refs) {
+  const pins = new M.VectorPinRef();
+  for (const r of refs) pins.push_back(r);
+  wb.addNet({ name, pins });
+  pins.delete();
+}
+
+// ── 1. Components ────────────────────────────────────────────────────────────
+
+addComp('U1', 80, 60, [
   { number: 1, name: 'VCC', x: -20, y: -30, directionFlags: M.PinDirection.DirUp },
   { number: 2, name: 'GND', x:  20, y:  30, directionFlags: M.PinDirection.DirDown },
   { number: 3, name: 'OUT', x:  40, y:   0, directionFlags: M.PinDirection.DirRight },
 ]);
-addComp('U2', 80, 60,[
+addComp('U2', 80, 60, [
   { number: 1, name: 'VCC', x: -20, y: -30, directionFlags: M.PinDirection.DirUp },
   { number: 2, name: 'GND', x:  20, y:  30, directionFlags: M.PinDirection.DirDown },
   { number: 3, name: 'IN',  x: -40, y:   0, directionFlags: M.PinDirection.DirLeft },
 ]);
-addComp('R1', 25, 55,[
+addComp('R1', 25, 55, [
   { number: 1, name: 'A', x: -0.5, y: -27.5, directionFlags: M.PinDirection.DirUp },
   { number: 2, name: 'B', x: -0.5, y:  27.5, directionFlags: M.PinDirection.DirDown },
 ]);
 
 // ── 2. Nets ──────────────────────────────────────────────────────────────────
 
-function addNet(name, refs) {
-  wb.addNet({ name, pins: refs });
-}
-
-addNet('VCC',[{ componentId:'U1', pinNumber:1 }, { componentId:'U2', pinNumber:1 }]);
-addNet('GND',[{ componentId:'U1', pinNumber:2 }, { componentId:'U2', pinNumber:2 }]);
-addNet('SIG',[{ componentId:'U1', pinNumber:3 }, { componentId:'R1', pinNumber:1 },
-               { componentId:'U2', pinNumber:3 }]);
+addNet('VCC', [{ componentId: 'U1', pinNumber: 1 }, { componentId: 'U2', pinNumber: 1 }]);
+addNet('GND', [{ componentId: 'U1', pinNumber: 2 }, { componentId: 'U2', pinNumber: 2 }]);
+addNet('SIG', [{ componentId: 'U1', pinNumber: 3 }, { componentId: 'R1', pinNumber: 1 },
+               { componentId: 'U2', pinNumber: 3 }]);
 
 // ── 3. Classify ──────────────────────────────────────────────────────────────
 
-const cls = wb.classify();
+const cls = wb.classify();           // VectorNetClassification
 wb.applyClassification(cls);
+cls.delete();
 
 // ── 4. Place ─────────────────────────────────────────────────────────────────
 
 const placements = wb.computePlacements();
-const pos = placements.toObject();
+const pos = placements.toObject();   // plain JS object for your own bookkeeping
 placements.delete();
 
 // ── 5. Route ─────────────────────────────────────────────────────────────────
 
-const routes = wb.routeAll();
+const routes = wb.routeAll();        // SchematicRouteResult — do NOT .delete()
 
-// render routes.wires, routes.junctions, routes.netLabels, routes.componentLabels …
+// render routes.wires (VectorWire), routes.junctions, routes.netLabels,
+// routes.componentLabels — all Emscripten vectors, iterate with size()/get(i)
 
 // ── 6. Move on drop ──────────────────────────────────────────────────────────
 
@@ -638,7 +739,8 @@ function onDrop(compId, newX, newY) {
     position: { x: newX, y: newY }, 
     transform: { rotation: 0, flipX: false } 
   });
-  // update render state for delta.affectedNets only
+  // delta.affectedNets  → VectorString: iterate with size()/get(i)
+  // delta.routes.wires  → VectorWire:   iterate with size()/get(i)
 }
 ```
 
@@ -648,12 +750,18 @@ function onDrop(compId, newX, newY) {
 
 | Object | When to `.delete()` |
 |---|---|
-| `ComponentPlacements` | After you are done passing/retrieving placements to/from WASM |
+| `VectorPinDescriptor` | Immediately after `addComponent()` or `replaceComponent()` |
+| `VectorPinRef` | Immediately after `addNet()` |
+| `VectorPoint2D` (pads) | Immediately after `pcb.addNet()` |
+| `VectorNetClassification` | Immediately after `applyClassification()` |
+| `ComponentPlacements` | After passing to / retrieving from WASM |
 | `PinMap` | After passing to `replaceComponent()` |
 | `WireBender` instance | When the schematic session ends |
 | `PcbVisualizer` instance | When done visualising |
 
-`SchematicRouteResult`, `IncrementalRouteResult`, `PcbRouteResult`, and other returned data items (like standard arrays) are JS-owned standard objects — **do not call** `.delete()` on them.
+`SchematicRouteResult`, `IncrementalRouteResult`, and `PcbRouteResult` are value-copy results
+returned from WASM. **Do not call `.delete()`** on them or on any vector field accessed through
+them (`result.wires`, `result.junctions`, `wire.points`, `delta.affectedNets`, etc.).
 
 ---
 
