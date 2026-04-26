@@ -96,7 +96,7 @@ public:
 	 * @return connector to net name mapping
 	 */
 	RouterState getState() const {
-		return RouterState(netRegistry);
+		return RouterState(netRegistry, shapeRegistry);
 	}
 
 	/**
@@ -171,23 +171,33 @@ public:
 		auto ptrConnEnd = [&](const Avoid::ConnEnd& connEnd) -> std::string {
 			Avoid::ConnEndType type = connEnd.type();
 			std::string point = bend::toStringPoint(connEnd.position());
-			std::string dir = bend::toStringDirection(connEnd.directions());
-			point += " (" + dir + ")";
+			std::string dir = " (" + bend::toStringDirection(connEnd.directions()) + ")";
 			if(type == Avoid::ConnEndPoint) {
-				return "Point" + point;
+				return "Point" + point + dir;
 			} else if(type == Avoid::ConnEndShapePin) {
+				Avoid::Point pinPoint = shapeRegistry.pinWorld(connEnd);
+				if(!bend::isSame(connEnd.position(), pinPoint)) {
+					point += "!" + bend::toStringPoint(pinPoint);
+				}
 				const Avoid::ShapeRef* s = connEnd.shape();
 				std::string shapeName = shapeRegistry.getShapeName(s ? s->id() : 0u);
-				return "Pin" + point + " P["
+				return "Pin" + point + dir + " P["
 					   + (s ? std::to_string(s->id()) : "null") + "." + std::to_string(connEnd.pinClassId()) + "] " + shapeName
 					   + (s ? bend::toStringPoint(s->position()) + " net:" + netRegistry.getNet(s->id(), connEnd.pinClassId()) : "");
 			} else if(type == Avoid::ConnEndJunction) {
 				const Avoid::JunctionRef* j = connEnd.junction();
-				junctions.insert(j);
-				return "Junc" + point + " J[" + (j ? std::to_string(j->id()) : "null") + "]"
-					   + (j ? bend::toStringPoint(j->recommendedPosition()) : "");
+				if(j) {
+					junctions.insert(j);
+					j->attachedConnectors().size();
+					Avoid::Point recommended = j->recommendedPosition();
+					if(!bend::isSame(connEnd.position(), recommended)) {
+						point += "!" + bend::toStringPoint(recommended);
+					}
+				}
+				return "Junc" + point + dir + " J[" + (j ? std::to_string(j->id()) : "null") + "]"
+					+ (j ? (":" + std::to_string(j->attachedConnectors().size())) : "");
 			} else {
-				return "Empty" + point;
+				return "Empty" + point + dir;
 			}
 		};
 
@@ -199,10 +209,10 @@ public:
 
 			WB_LOG << "	 C[" << c->id() << "]" << (netRegistry.isValid(c) ? "" : "X")
 				   << (c->needsRepaint() ? "~" : "")
-				   << " net=" << netRegistry.getNet(c)
-				   << " from=" << ptrConnEnd(ends.first)
-				   << " to=" << ptrConnEnd(ends.second)
-				   << " segs=";
+				   << " " << netRegistry.getNet(c)
+				   << " FROM " << ptrConnEnd(ends.first)
+				   << " TO " << ptrConnEnd(ends.second)
+				   << " SEGS ";
 			for(size_t i = 0; i < r.size(); ++i) {
 				if(i) WB_LOG << "->";
 				WB_LOG << "(" << (int)std::round(r.ps[i].x)
@@ -306,7 +316,7 @@ private:
 	 * Router initialisation.
 	 */
 	void initRouter() {
-		router = new Avoid::Router(/*Avoid::PolyLineRouting | */ Avoid::OrthogonalRouting);
+		router = new Avoid::Router(/* Avoid::PolyLineRouting | */ Avoid::OrthogonalRouting);
 		router->setTransactionUse(true);
 		router->setRoutingPenalty(Avoid::segmentPenalty,
 								  opts.segmentPenalty);
@@ -504,7 +514,7 @@ private:
 	}
 
 	bool improveJunctions(bool dryRun = false) {
-		RouterState state(netRegistry);
+		RouterState state = getState();
 		auto jes = state.getJunctionsToFix();
 		if(jes.empty()) return false;
 		WB_LOG << "Junctions to fix (" << jes.size() << "):\n";

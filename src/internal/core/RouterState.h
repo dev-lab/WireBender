@@ -15,7 +15,8 @@
 
 class RouterState {
 public:
-	RouterState(const NetRegistry& netRegistry): netRegistry(netRegistry) {
+	RouterState(const NetRegistry& netRegistry, const ShapeRegistry& shapeRegistry)
+		: netRegistry(netRegistry), shapeRegistry(shapeRegistry) {
 		auto addJunction = [&](const bend::Junction& j, const bend::Connector& c, bool front, std::string net) {
 			if(!j) return;
 			netRegistry.cacheIdNet(j.getId(), net);
@@ -36,11 +37,11 @@ public:
 	}
 
 	explicit RouterState(const RouterState& other) noexcept
-		: netRegistry(other.netRegistry), connectors(other.connectors), junctionEdges(other.junctionEdges) {
+		: netRegistry(other.netRegistry), shapeRegistry(other.shapeRegistry), connectors(other.connectors), junctionEdges(other.junctionEdges) {
 	}
 
 	explicit RouterState(RouterState&& other) noexcept
-		: netRegistry(other.netRegistry), connectors(std::move(other.connectors)), junctionEdges(std::move(other.junctionEdges)) {
+		: netRegistry(other.netRegistry), shapeRegistry(other.shapeRegistry), connectors(std::move(other.connectors)), junctionEdges(std::move(other.junctionEdges)) {
 	}
 
 	RouterState& operator=(const RouterState& other) = delete;
@@ -51,6 +52,13 @@ public:
 	 */
 	inline const NetRegistry& getNetRegistry() const {
 		return netRegistry;
+	}
+
+	/**
+	 * @return Shape Registry
+	 */
+	inline const ShapeRegistry& getShapeRegistry() const {
+		return shapeRegistry;
 	}
 
 	/**
@@ -318,6 +326,7 @@ public:
 
 private:
 	const NetRegistry& netRegistry;
+	const ShapeRegistry& shapeRegistry;
 	std::map<unsigned int, bend::Connector> connectors;
 	std::map<unsigned int, bend::JunctionEdges> junctionEdges;
 };

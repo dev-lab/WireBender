@@ -104,6 +104,19 @@ public:
 		throw std::runtime_error("pin not found: " + comp + "." + std::to_string(pin));
 	}
 
+	Avoid::Point pinWorld(const Avoid::ConnEnd& connEnd) const {
+		if(connEnd.type() == Avoid::ConnEndShapePin) {
+			Avoid::ShapeRef* shape = connEnd.shape();
+			if(shape) {
+				std::string name = getShapeName(shape->id());
+				if(!name.empty()) {
+					return pinWorld(name, connEnd.pinClassId());
+				}
+			}
+		}
+		return connEnd.type() == Avoid::ConnEndJunction ? connEnd.junction()->recommendedPosition() : connEnd.position();
+	}
+
 	/**
 	 * Get all registered shapes.
 	 * @return map of name to shape
@@ -259,8 +272,8 @@ private:
 	 * @param target target transform
 	 */
 	void transformShape(Avoid::ShapeRef* shape,
-						 const bend::Transform& current,
-						 const bend::Transform& target) {
+						const bend::Transform& current,
+						const bend::Transform& target) {
 		const Avoid::Polygon& poly = shape->polygon();
 		if(poly.empty()) return;
 		const Avoid::Point center = shape->position();

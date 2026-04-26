@@ -55,6 +55,7 @@ private:
 	 */
 	void build(const RouterState& routerState, const std::set<std::string>& filter) {
 		const NetRegistry& netRegistry = routerState.getNetRegistry();
+		const ShapeRegistry& shapeRegistry = routerState.getShapeRegistry();
 #ifdef WB_DEBUG
 		std::string traceFileName = makeTimestampFilename();
 		netRegistry.getRouter()->outputDiagram(traceFileName);
@@ -67,17 +68,44 @@ private:
 			if(!filter.empty() && !filter.count(net)) continue;
 			const auto& r = conn.getPoints();
 			std::vector<Avoid::Point> pts(r.begin(), r.end());
-			bend::ConnectorEnd from(conn, true);
-			bend::ConnectorEnd to(conn, false);
-			if(pts.empty()) {
-				pts.push_back(from.getEndPoint());
-				pts.push_back(to.getEndPoint());
-			} else {
-				if(!from.isEndPointSame()) {
-					pts.insert(pts.begin(), from.getEndPoint());
+			std::pair<Avoid::ConnEnd, Avoid::ConnEnd> ends = conn.endpoints();
+			auto getEndPoint = [&](unsigned int id, const bend::Connector& conn, bool from) {
+				bend::ConnectorEnd connEnd(conn, from);
+				Avoid::Point point = connEnd.getEndPoint();
+				const Avoid::ConnEnd& end = from ? ends.first : ends.second;
+				Avoid::Point pinPoint = shapeRegistry.pinWorld(end);
+				if(!bend::isSame(point, pinPoint)) {
+					std::string name = shapeRegistry.getShapeName(end.shape() ? end.shape()->id() : 0u);
+					WB_LOG << "Warning: " << net << " connection[" << id << "] " << (from ? "start" : "end")
+						<< " " << bend::toStringPoint(point) << " differs from "
+						<< name << "." << std::to_string(end.pinClassId()) << " pin " << bend::toStringPoint(pinPoint) << "\n";
+					point = pinPoint;
 				}
-				if(!to.isEndPointSame() || pts.size() < 2) {
-					pts.push_back(to.getEndPoint());
+				return point;
+			};
+			Avoid::Point fromPoint = getEndPoint(id, conn, true);
+			Avoid::Point toPoint = getEndPoint(id, conn, false);
+			if(pts.empty()) {
+				pts.push_back(fromPoint);
+				pts.push_back(toPoint);
+			} else {
+				if(!bend::isSame(fromPoint, pts.front())) {
+					bend::ConnectorEnd fromEnd(conn, true);
+					if(bend::isSame(fromEnd.getEndPoint(), pts.front())) {
+						// libavoid connection first point goes to wrong shape pin coordinates
+						pts.front() = fromPoint;
+					} else {
+						pts.insert(pts.begin(), fromPoint);
+					}
+				}
+				if(!bend::isSame(toPoint, pts.back()) || pts.size() < 2) {
+					bend::ConnectorEnd toEnd(conn, false);
+					if(bend::isSame(toEnd.getEndPoint(), pts.back())) {
+						// libavoid connection last point goes to wrong shape pin coordinates
+						pts.back() = toPoint;
+					} else {
+						pts.push_back(toPoint);
+					}
 				}
 			}
 			wires[net].push_back(std::move(pts));

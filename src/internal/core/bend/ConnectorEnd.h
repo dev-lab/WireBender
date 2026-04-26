@@ -86,6 +86,37 @@ public:
 		return !isFront();
 	}
 
+	static bool isJunction(const Avoid::ConnEnd& end) {
+		return Avoid::ConnEndJunction == end.type();
+	}
+
+	static bool isShapePin(const Avoid::ConnEnd& end) {
+		return Avoid::ConnEndShapePin == end.type();
+	}
+
+	/**
+	 * @brief not safe for empty connector
+	 * @return Connector End
+	 */
+	Avoid::ConnEnd getEnd(bool front) const {
+		auto ends = getConnector().endpoints();
+		return front ? ends.first : ends.second;
+	}
+
+	/**
+	 * @return Connector End
+	 */
+	Avoid::ConnEnd getEnd() const {
+		return getEnd(isFront());
+	}
+
+	/**
+	 * @return Connector End
+	 */
+	Avoid::ConnEnd getOppositeEnd() const {
+		return getEnd(isBack());
+	}
+
 	/**
 	 * @brief Get connector end position
 	 */
@@ -98,8 +129,7 @@ public:
 
 	Avoid::Point getEndPoint(bool front) const {
 		if(!isValid()) return Avoid::Point();
-		auto ends = getConnector().endpoints();
-		return getEndPoint(front ? ends.first : ends.second);
+		return getEndPoint(getEnd(front));
 	}
 
 	Avoid::Point getEndPoint() const {
