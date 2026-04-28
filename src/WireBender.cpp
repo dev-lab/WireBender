@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026 Taras Greben
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Commercial-WireBender
+ * See LICENSE file for details.
+ */
+
 #include "WireBender.h"
 
 #include "internal/Labelbot.h"

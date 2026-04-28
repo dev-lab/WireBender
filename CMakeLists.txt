@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Taras Greben
+# SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Commercial-WireBender
+# See LICENSE file for details.
+
 cmake_minimum_required(VERSION 3.16)
 project(WireBender CXX)
 
