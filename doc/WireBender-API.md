@@ -10,10 +10,10 @@ It also visualises PCB pad connections as optimized multi-point networks.
 ## Loading the module
 
 ```js
-import WireBenderModule from './WireBender.js';
+import WireBenderModule from 'https://dev-lab.github.io/WireBender/latest/WireBender.js';
 
 const Module = await WireBenderModule({
-  locateFile: f => f === 'WireBender.wasm' ? './WireBender.wasm' : f
+  locateFile: f => f === 'WireBender.wasm' ? 'https://dev-lab.github.io/WireBender/latest/WireBender.wasm' : f
 });
 ```
 
