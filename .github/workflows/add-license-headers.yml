@@ -1,12 +1,13 @@
 name: Auto Add License Headers
 on:
-  workflow_dispatch: # Allows you to manually trigger this via the GitHub UI
+  workflow_dispatch: 
 
 jobs:
   add-headers:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed to push changes back to the repo
+      contents: write
+      pull-requests: write # Needed to open the PR
 
     steps:
       - name: Checkout Code
@@ -18,7 +19,12 @@ jobs:
           mode: fix
           config: .licenserc.yaml
 
-      - name: Commit Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
         with:
-          commit_message: "chore: automatically enrich source files with copyright headers"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: automatically enrich source files with copyright headers"
+          title: "chore: add missing copyright headers"
+          body: "This PR automatically adds the missing SPDX copyright headers to all source files."
+          branch: "chore/add-license-headers"
+          base: "main"
