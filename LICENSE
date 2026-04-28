@@ -3,12 +3,12 @@ WireBender - Dual Licensing Notice
 
 This software is available under two different licenses:
 
-1. GNU Affero General Public License v3.0 (AGPLv3)
+1. GNU Affero General Public License v3.0 (AGPL-3.0-only)
    This is the default license. It allows you to use, modify, and distribute 
    this software for free, provided that you disclose your source code and 
    license modified versions under the same AGPLv3 terms (including network use).
 
-2. Commercial License
+2. Commercial License (LicenseRef-Commercial-WireBender)
    If you wish to use this software in a proprietary setting, without the 
    obligations of the AGPLv3 (such as disclosing your modifications), you 
    must acquire a commercial license. 

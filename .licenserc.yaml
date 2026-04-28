@@ -1,0 +1,16 @@
+header:
+  license:
+    spdx-id: "AGPL-3.0-only"
+    copyright-owner: "Taras Greben"
+    content: |
+      Copyright (c) 2026 Taras Greben
+      SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-Commercial-WireBender
+      See LICENSE file for details.
+
+  paths-ignore:
+    - 'dist'
+    - 'node_modules'
+    - 'docs'
+    - '**/*.md'
+    - 'LICENSE'
+    - '.github'

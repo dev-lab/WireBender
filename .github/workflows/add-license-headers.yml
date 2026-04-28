@@ -1,0 +1,24 @@
+name: Auto Add License Headers
+on:
+  workflow_dispatch: # Allows you to manually trigger this via the GitHub UI
+
+jobs:
+  add-headers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to push changes back to the repo
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Inject Copyright Headers
+        uses: apache/skywalking-eyes/header@main
+        with:
+          mode: fix
+          config: .licenserc.yaml
+
+      - name: Commit Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: automatically enrich source files with copyright headers"
