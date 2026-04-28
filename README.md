@@ -26,7 +26,7 @@ The library handles complex tasks such as automatic component placement, connect
 
 ## 📖 Documentation
 
-For complete details on classes, data structures, coordinate systems, and advanced use cases, please see the **[API Reference](doc/WireBender-API.md)**.
+For complete details on classes, data structures, coordinate systems, and advanced use cases, please see the **[API Reference](./doc/WireBender-API.md)**.
 
 ## 🛠 Usage Example
 
