@@ -194,7 +194,6 @@ public:
 				const Avoid::JunctionRef* j = connEnd.junction();
 				if(j) {
 					junctions.insert(j);
-					j->attachedConnectors().size();
 					Avoid::Point recommended = j->recommendedPosition();
 					if(!bend::isSame(connEnd.position(), recommended)) {
 						point += "!" + bend::toStringPoint(recommended);
