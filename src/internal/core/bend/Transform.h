@@ -16,7 +16,7 @@ public:
 	/**
 	 * @brief Empty transform.
 	 */
-	inline Transform() noexcept : rotation(0), flipX(false) {
+	inline Transform() noexcept: rotation(0), flipX(false) {
 	}
 
 	/**
@@ -24,7 +24,7 @@ public:
 	 * @param rotation rotation in degree, any integer
 	 * @param flipX true if flipped horizontally
 	 */
-	inline explicit Transform(int rotation, bool flipX) noexcept : rotation(normalizeRotation(rotation)), flipX(flipX) {
+	inline explicit Transform(int rotation, bool flipX) noexcept: rotation(normalizeRotation(rotation)), flipX(flipX) {
 	}
 
 	/**
@@ -69,7 +69,7 @@ public:
 	 * @return D4 delta composition (to go from current state to target state)
 	 */
 	inline Transform delta(const Transform& target) const {
-	    return inverse().compose(target);
+		return inverse().compose(target);
 	}
 
 	/**

@@ -15,19 +15,19 @@ namespace WireBender {
 
 struct SchematicNetlist {
 	const ComponentDescriptor* findComponent(const std::string& id) const {
-		for (const auto& c : components)
-			if (c.id == id) return &c;
+		for(const auto& c: components)
+			if(c.id == id) return &c;
 		return nullptr;
 	}
 
 	const NetDescriptor* findNet(const std::string& name) const {
-		for (const auto& n : nets)
-			if (n.name == name) return &n;
+		for(const auto& n: nets)
+			if(n.name == name) return &n;
 		return nullptr;
 	}
 
 	std::vector<ComponentDescriptor> components;
-	std::vector<NetDescriptor>		 nets;
+	std::vector<NetDescriptor> nets;
 };
 
 } // namespace WireBender

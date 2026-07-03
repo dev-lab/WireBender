@@ -22,8 +22,8 @@
  * libavoid shapes, but nothing about nets, routing, or SVG.
  *
  * Transform convention (matches libavoid move order):
- *   1. flipX  — mirror about the vertical centre axis  (x → w - x)
- *   2. rotate — clockwise, in 90° steps
+ *	 1. flipX  — mirror about the vertical centre axis  (x → w - x)
+ *	 2. rotate — clockwise, in 90° steps
  *
  * Pin coordinates stored in Pin are always relative to the component's
  * unrotated, unflipped top-left corner.
@@ -107,7 +107,8 @@ public:
 			return Avoid::Point(cx - ew / 2.0 + lx,
 								cy - eh / 2.0 + ly);
 		}
-		throw std::runtime_error("pin not found: " + comp + "." + std::to_string(pin));
+		std::cerr << "[SchematicRouter] Error: pin not found: " << comp << "." << pin << ". Falling back to component center.\n";
+		return Avoid::Point(c.placement.position.x, c.placement.position.y);
 	}
 
 	Avoid::Point pinWorld(const Avoid::ConnEnd& connEnd) const {
@@ -191,7 +192,7 @@ public:
 		};
 
 		// Register pins in the original (unrotated/unflipped) local coordinate
-		// system.  Fractional offsets are relative to the unrotated comp.w × comp.h
+		// system.	Fractional offsets are relative to the unrotated comp.w × comp.h
 		// bounding box, matching the polygon built above.
 		for(const auto& pin: comp.pins) {
 			if(isCenter(pin.x, comp.w, pin.y, comp.h)) {

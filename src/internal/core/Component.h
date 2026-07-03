@@ -8,8 +8,8 @@
 
 #include "Pin.h"
 #include "bend/Placement.h"
-#include <vector>
 #include <map>
+#include <vector>
 
 /**
  * Component.

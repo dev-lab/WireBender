@@ -20,7 +20,7 @@ const double NEPS = -EPS;
 
 /**
  * @brief Hash functor for std::pair<int, int>, suitable for use as an
- *        unordered_map or unordered_set key.
+ *		  unordered_map or unordered_set key.
  *
  * Uses a Boost-style hash-combine formula to mix the two halves.
  */
@@ -101,9 +101,9 @@ inline std::string toStringBox(const Avoid::Box& box) {
  * @brief Convert Avoid::ConnDirFlags to human-readable string.
  *
  * Examples:
- *  - ConnDirUp -> "Up"
- *  - ConnDirUp | ConnDirLeft -> "Up|Left"
- *  - ConnDirAll -> "All"
+ *	- ConnDirUp -> "Up"
+ *	- ConnDirUp | ConnDirLeft -> "Up|Left"
+ *	- ConnDirAll -> "All"
  */
 inline std::string toStringDirection(Avoid::ConnDirFlags flags) {
 	if(flags == Avoid::ConnDirAll) {

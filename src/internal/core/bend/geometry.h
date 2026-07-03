@@ -18,10 +18,10 @@ namespace bend {
  * for all comparison use-cases inside the post-processor.
  *
  * @tparam T point class (e.g. Point2D)
- * @param P  the query point
- * @param A  start of the segment
- * @param B  end of the segment
- * @return   squared Euclidean distance from P to the nearest point on AB
+ * @param P	 the query point
+ * @param A	 start of the segment
+ * @param B	 end of the segment
+ * @return	 squared Euclidean distance from P to the nearest point on AB
  */
 template<class T>
 double pointToSegmentDistSq(const T& P,
@@ -41,7 +41,7 @@ double pointToSegmentDistSq(const T& P,
 
 /**
  * @brief Tests whether the ordered triple (A, B, C) is in counter-clockwise
- *        orientation.
+ *		  orientation.
  *
  * This is the standard cross-product sign test used as a building block for
  * segment intersection detection.
@@ -50,7 +50,7 @@ double pointToSegmentDistSq(const T& P,
  * @param A first point
  * @param B second point
  * @param C third point
- * @return  true if the turn A→B→C is counter-clockwise
+ * @return	true if the turn A→B→C is counter-clockwise
  */
 template<class T>
 bool ccw(const T& A, const T& B, const T& C) {
@@ -68,7 +68,7 @@ bool ccw(const T& A, const T& B, const T& C) {
  * @param B end of the first segment
  * @param C start of the second segment
  * @param D end of the second segment
- * @return  true if the two segments properly intersect
+ * @return	true if the two segments properly intersect
  */
 template<class T>
 bool segmentsIntersect(const T& A, const T& B,
@@ -97,7 +97,7 @@ bool segmentsIntersect(const T& A, const T& B,
  * @param B end of the first line segment
  * @param C start of the second line segment
  * @param D end of the second line segment
- * @return  intersection point of the two lines, or A if lines are parallel
+ * @return	intersection point of the two lines, or A if lines are parallel
  */
 template<class T>
 T computeIntersection(const T& A, const T& B,
@@ -113,7 +113,7 @@ T computeIntersection(const T& A, const T& B,
 /**
  * @brief Computes the squared distance between two line segments AB and CD.
  *
- * If the segments intersect the distance is zero.  Otherwise it is the
+ * If the segments intersect the distance is zero.	Otherwise it is the
  * minimum of the four point-to-segment distances.
  *
  * @tparam T point class (e.g. Point2D)
@@ -121,7 +121,7 @@ T computeIntersection(const T& A, const T& B,
  * @param B end of the first segment
  * @param C start of the second segment
  * @param D end of the second segment
- * @return  squared minimum distance between the two segments
+ * @return	squared minimum distance between the two segments
  */
 template<class T>
 double segmentToSegmentDistSq(const T& A, const T& B,
@@ -147,6 +147,5 @@ struct Rect {
 			   && y1 - inflate < other.y2 && y2 + inflate > other.y1;
 	}
 };
-
 
 } // namespace bend

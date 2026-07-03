@@ -83,8 +83,8 @@ private:
 				if(!bend::isSame(point, pinPoint)) {
 					std::string name = shapeRegistry.getShapeName(end.shape() ? end.shape()->id() : 0u);
 					WB_LOG << "Warning: " << net << " connection[" << id << "] " << (from ? "start" : "end")
-						<< " " << bend::toStringPoint(point) << " differs from "
-						<< name << "." << std::to_string(end.pinClassId()) << " pin " << bend::toStringPoint(pinPoint) << "\n";
+						   << " " << bend::toStringPoint(point) << " differs from "
+						   << name << "." << std::to_string(end.pinClassId()) << " pin " << bend::toStringPoint(pinPoint) << "\n";
 					point = pinPoint;
 				}
 				return point;

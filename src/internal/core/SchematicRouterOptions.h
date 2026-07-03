@@ -15,12 +15,12 @@ struct SchematicRouterOptions {
 	double pinInsideOffset = 0.0;
 
 	// libavoid routing penalties
-	double segmentPenalty = 50.0; // default: 50; shall be > 0
-	double anglePenalty = 0.0; // default: 0
-	double crossingPenalty = 200.0; // default: 200
+	double segmentPenalty = 50.0;			// default: 50; shall be > 0
+	double anglePenalty = 0.0;				// default: 0
+	double crossingPenalty = 200.0;			// default: 200
 	double clusterCrossingPenalty = 4000.0; // default: 4000
-	double fixedSharedPathPenalty = 0.0; // in tests: 9000, 0 needed for optimization
-	double portDirectionPenalty = 100.0; // default: 100
+	double fixedSharedPathPenalty = 0.0;	// in tests: 9000, 0 needed for optimization
+	double portDirectionPenalty = 100.0;	// default: 100
 
 	// libavoid routing parameters
 	double idealNudgingDistance = 8.0;

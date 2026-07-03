@@ -17,7 +17,6 @@ namespace bend {
  */
 class JunctionEdges {
 public:
-
 	JunctionEdges() noexcept = default;
 
 	inline explicit JunctionEdges(const Junction& junction, const std::vector<ConnectorEnd>& connectorEnds) noexcept
@@ -123,6 +122,7 @@ public:
 	inline std::vector<double> getJunctionAnchors1d() const {
 		return getJunctionAnchors1d(getCentroid());
 	}
+
 private:
 	inline void clearCache() const {
 		locksCalculated = false;

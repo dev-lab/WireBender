@@ -48,8 +48,8 @@ enum PinDirection : int {
  * Component pin descriptor.
  */
 struct PinDescriptor {
-	int number;		  // immutable integer identity used for net connections and pin mapping
-	std::string name; // optional label ("Gate", "VCC", ""); may be ""
+	int number;					 // immutable integer identity used for net connections and pin mapping
+	std::string name;			 // optional label ("Gate", "VCC", ""); may be ""
 	double x = 0.0;				 // x position in component-local coordinates: 0 - center of the component box
 	double y = 0.0;				 // y position in component-local coordinates: 0 - center of the component box
 	int directionFlags = DirAll; // pin direction flags

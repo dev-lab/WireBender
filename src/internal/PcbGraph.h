@@ -49,7 +49,7 @@ struct GraphNode {
 
 /**
  * @brief A directed segment belonging to a specific net, used for global
- *        clearance checks between different nets.
+ *		  clearance checks between different nets.
  */
 struct GlobalSegment {
 	/** @brief Zero-based index of the net that owns this segment. */
@@ -102,12 +102,12 @@ struct EdgeInfo {
  * clearance checks, and populates the @p netNameToId / @p netNames
  * lookup tables.
  *
- * @param wires       Input wires from the router.
- * @param nets        Full net list (used to identify pad locations).
- * @param[out] netGraphs    One graph per net, in the same order as @p netNames.
- * @param[out] allSegs      Flat list of all segments with their net IDs.
- * @param[out] netNames     Net names ordered by their assigned ID.
- * @param[out] netNameToId  Map from net name to integer ID.
+ * @param wires		  Input wires from the router.
+ * @param nets		  Full net list (used to identify pad locations).
+ * @param[out] netGraphs	One graph per net, in the same order as @p netNames.
+ * @param[out] allSegs		Flat list of all segments with their net IDs.
+ * @param[out] netNames		Net names ordered by their assigned ID.
+ * @param[out] netNameToId	Map from net name to integer ID.
  */
 inline void buildNetGraphs(
 		const std::vector<Wire>& wires,

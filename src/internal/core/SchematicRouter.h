@@ -200,7 +200,7 @@ public:
 					}
 				}
 				return "Junc" + point + dir + " J[" + (j ? std::to_string(j->id()) : "null") + "]"
-					+ (j ? (":" + std::to_string(j->attachedConnectors().size())) : "");
+					   + (j ? (":" + std::to_string(j->attachedConnectors().size())) : "");
 			} else {
 				return "Empty" + point + dir;
 			}
@@ -296,13 +296,13 @@ public:
 			RouterStats stats = getStats();
 			bool ok = stats.isOk();
 			std::cout << "[WireBender] Hyperwires bent" << (ok ? " OK" : "... but not shiny") << ":\n"
-					  << "	Orthogonal segment overlaps:       "
+					  << "	Orthogonal segment overlaps:	   "
 					  << stats.orthogonalSegmentOverlapCount << ", at ends: " << stats.orthogonalSegmentOverlapAtEndCount << "\n"
 					  << "	Orthogonal fixed segment overlaps: "
 					  << stats.orthogonalFixedSegmentOverlapCount << ", at ends: " << stats.orthogonalFixedSegmentOverlapAtEndCount << "\n"
-					  << "	Orthogonal touching segments:      " << stats.orthogonalTouchingSegmentCount << "\n"
-					  << "	Invalid orthogonal segments:       " << stats.invalidOrthogonalSegmentCount << "\n"
-					  << "	Total crossing count:              " << stats.crossingCount << "\n";
+					  << "	Orthogonal touching segments:	   " << stats.orthogonalTouchingSegmentCount << "\n"
+					  << "	Invalid orthogonal segments:	   " << stats.invalidOrthogonalSegmentCount << "\n"
+					  << "	Total crossing count:			   " << stats.crossingCount << "\n";
 			return ok;
 		} else {
 			return true;
@@ -632,8 +632,8 @@ private:
 	 * Check if given point is inside any of registered components.
 	 * Accounts for component rotation: a 90° or 270° transform swaps w and h
 	 * in world space, so the bounding box is built from effective dimensions.
-	 * @param x  point x to be checked
-	 * @param y  point y to be checked
+	 * @param x	 point x to be checked
+	 * @param y	 point y to be checked
 	 * @return true if point is inside some component's bounding box
 	 */
 	bool insideAnyComp(double x, double y) const {

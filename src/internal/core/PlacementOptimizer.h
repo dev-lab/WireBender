@@ -73,19 +73,19 @@ struct PlacementOptions {
  * Component placement optimizer using libcola (force-directed physics) and
  * libvpsc (overlap removal).
  *
- * Each Component carries a bend::Placement (position + transform).  The
+ * Each Component carries a bend::Placement (position + transform).	 The
  * optimizer only updates the position part; the transform (rotation/flip) is
- * always preserved as-is.  When a component is rotated 90° or 270° its
+ * always preserved as-is.	When a component is rotated 90° or 270° its
  * effective bounding box presented to libcola has w and h swapped, so that
  * the physics solver and overlap-removal work in world-space dimensions.
  *
  * Usage:
- *   PlacementOptions opts;
- *   opts.idealEdgeLength = 200;   // spread components further apart
- *   opts.routingGap      = 50;    // more room around components for wires
+ *	 PlacementOptions opts;
+ *	 opts.idealEdgeLength = 200;   // spread components further apart
+ *	 opts.routingGap	  = 50;	   // more room around components for wires
  *
- *   PlacementOptimizer optimizer(opts);
- *   optimizer.place(comps, nl);   // comps placements are updated in-place
+ *	 PlacementOptimizer optimizer(opts);
+ *	 optimizer.place(comps, nl);   // comps placements are updated in-place
  */
 class PlacementOptimizer {
 public:
@@ -97,14 +97,14 @@ public:
 
 	/**
 	 * Run placement.
-	 * @param comps  Component placements are updated in-place (position only;
-	 *               transform is preserved).  All other fields (w, h, pins) are
-	 *               left unchanged.
-	 * @param nl     Net lists.
+	 * @param comps	 Component placements are updated in-place (position only;
+	 *				 transform is preserved).  All other fields (w, h, pins) are
+	 *				 left unchanged.
+	 * @param nl	 Net lists.
 	 * @param locked Maps componentId to a locked bend::Placement (position +
-	 *               transform).  Locked components are pinned at their given
-	 *               positions throughout the physics solve and overlap removal;
-	 *               all other components are free.
+	 *				 transform).  Locked components are pinned at their given
+	 *				 positions throughout the physics solve and overlap removal;
+	 *				 all other components are free.
 	 */
 	void place(Components& comps,
 			   const NetList& nl,
@@ -118,10 +118,10 @@ public:
 		const std::string centerComp = findCenter(comps, compDegree);
 
 		// 3. Build libvpsc rectangles (one per component).
-		//    Locked components start at their target positions; free components
-		//    get the usual stagger initial state.
-		//    Rectangle dimensions account for the component's transform: a 90°
-		//    or 270° rotation swaps w and h in world space.
+		//	  Locked components start at their target positions; free components
+		//	  get the usual stagger initial state.
+		//	  Rectangle dimensions account for the component's transform: a 90°
+		//	  or 270° rotation swaps w and h in world space.
 		// colaLocks is filled by buildRectangles — it has access to both the
 		// locked world position and the rectangle dimensions needed for the
 		// cola::Lock centre-coordinate calculation.
@@ -138,7 +138,7 @@ public:
 		// 5. Run physics solver with locks, then remove overlaps.
 		//
 		// Locked components are held fixed during the physics solve via
-		// cola::PreIteration.  removeoverlaps() has no fixed-rectangle API,
+		// cola::PreIteration.	removeoverlaps() has no fixed-rectangle API,
 		// so we run it on free components ONLY — locked ones are excluded.
 
 		if(!colaLocks.empty()) {
@@ -317,7 +317,7 @@ private:
 	 * Step 5+6: apply results.
 	 *
 	 * For every component the rectangle centre produced by libcola/libvpsc is
-	 * written back as comp.placement.position (x, y).  The transform stored in
+	 * written back as comp.placement.position (x, y).	The transform stored in
 	 * comp.placement is never touched — the optimizer only moves components, it
 	 * does not rotate or flip them.
 	 *

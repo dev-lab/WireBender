@@ -8,9 +8,9 @@
 
 #include "WireBenderTypes.h"
 #include "internal/SchematicNetlist.h"
-#include "internal/core/bend/utils.h"
-#include "internal/core/bend/geometry.h"
 #include "internal/core/bend/Transform.h"
+#include "internal/core/bend/geometry.h"
+#include "internal/core/bend/utils.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -105,7 +105,7 @@ public:
 	 * @param netLabels result net labels
 	 * @param netNames net names to build labels
 	 */
-	template <class T>
+	template<class T>
 	void annotateNets(std::vector<NetLabelHint>& netLabels, const T& netNames) {
 		for(const auto& net: netNames) {
 			netLabels.push_back(netLabelHint(net));
@@ -128,9 +128,9 @@ protected:
 			const double w = getWidth(comp, placement.transform);
 			const double h = getHeight(comp, placement.transform);
 			bend::Rect compRect{pos.x - w / 2 - BBOX_INFLATE,
-						  pos.y - h / 2 - BBOX_INFLATE,
-						  pos.x + w / 2 + BBOX_INFLATE,
-						  pos.y + h / 2 + BBOX_INFLATE};
+								pos.y - h / 2 - BBOX_INFLATE,
+								pos.x + w / 2 + BBOX_INFLATE,
+								pos.y + h / 2 + BBOX_INFLATE};
 			if(r.overlaps(compRect)) return true;
 		}
 		// Check wire segments
@@ -141,9 +141,9 @@ protected:
 					const auto& p1 = w.points[i];
 					const auto& p2 = w.points[i + 1];
 					bend::Rect seg{std::min(p1.x, p2.x) - WIRE_INFLATE,
-							 std::min(p1.y, p2.y) - WIRE_INFLATE,
-							 std::max(p1.x, p2.x) + WIRE_INFLATE,
-							 std::max(p1.y, p2.y) + WIRE_INFLATE};
+								   std::min(p1.y, p2.y) - WIRE_INFLATE,
+								   std::max(p1.x, p2.x) + WIRE_INFLATE,
+								   std::max(p1.y, p2.y) + WIRE_INFLATE};
 					if(r.overlaps(seg)) return true;
 				}
 		}
@@ -162,13 +162,13 @@ protected:
 	 * Coordinate convention: component positions are box centres; pin coords
 	 * are component-local (origin = centre).
 	 * All output positions are world-space centre anchors for the text.
-	 * 
+	 *
 	 * Approximate text dimensions (world units) are passed in so the caller can
 	 * tune them; a sensible default is ~refW=40, refH=12, valW=36, valH=11.
 	 */
 	ComponentLabelHint componentLabelHint(const ComponentDescriptor& comp, const Placement& placement) const {
 		const Point2D& pos = placement.position;
-		const double hw = getWidth(comp, placement.transform) / 2.0;	 // component half-width
+		const double hw = getWidth(comp, placement.transform) / 2.0;  // component half-width
 		const double hh = getHeight(comp, placement.transform) / 2.0; // component half-height
 
 		// Candidate centre positions (world coords), tried in priority order:
@@ -197,7 +197,7 @@ protected:
 			}
 		}
 		const bend::Rect refRect{refPos.x - REF_HW, refPos.y - REF_HH,
-						   refPos.x + REF_HW, refPos.y + REF_HH};
+								 refPos.x + REF_HW, refPos.y + REF_HH};
 
 		// Value candidates: prefer the opposite side from ref to separate them
 		const auto valCandidates = std::vector<Point2D>{

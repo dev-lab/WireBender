@@ -26,39 +26,39 @@ namespace WireBender {
  * After the router produces an initial solution this class applies a series
  * of iterative graph-based refinements to each net:
  *
- *  1. Self-intersection resolution - crossing wire segments within the
- *     same net are detected and resolved by injecting a junction node at the
- *     crossing point (@see resolveSelfIntersections).
+ *	1. Self-intersection resolution - crossing wire segments within the
+ *	   same net are detected and resolved by injecting a junction node at the
+ *	   crossing point (@see resolveSelfIntersections).
  *
- *  2. Sharp-corner relaxation / Steiner-junction injection - obtuse
- *     angles that exceed a configurable threshold are smoothed.  For simple
- *     degree-2 bend nodes the corner is replaced by a short diagonal chamfer;
- *     for higher-degree junctions a Steiner point is nudged outward along the
- *     bisector direction.  Both operations respect the minimum clearance to
- *     all other-net segments.
+ *	2. Sharp-corner relaxation / Steiner-junction injection - obtuse
+ *	   angles that exceed a configurable threshold are smoothed.  For simple
+ *	   degree-2 bend nodes the corner is replaced by a short diagonal chamfer;
+ *	   for higher-degree junctions a Steiner point is nudged outward along the
+ *	   bisector direction.	Both operations respect the minimum clearance to
+ *	   all other-net segments.
  *
- *  3. Cycle elimination - after the iterative refinement loop the graph
- *     is reduced to a minimum spanning tree to remove any redundant segments
- *     introduced during routing (@see enforceTreeStructure).
+ *	3. Cycle elimination - after the iterative refinement loop the graph
+ *	   is reduced to a minimum spanning tree to remove any redundant segments
+ *	   introduced during routing (@see enforceTreeStructure).
  *
  * The result is serialised back into the @c PcbRouteResult wire/junction
  * format expected by the rest of the pipeline.
  *
  * @note The class holds a reference to the net list passed at construction.
- *       The caller must ensure that the net list outlives the processor.
+ *		 The caller must ensure that the net list outlives the processor.
  */
 class PcbPostProcessor {
 public:
 	/**
 	 * @brief Constructs a post-processor for the given set of nets.
 	 *
-	 * @param nets           All nets in the design.  Referenced but not copied.
-	 * @param clearance      Minimum clearance (in board units) that must be
-	 *                       maintained between segments belonging to different
-	 *                       nets.  Defaults to 4.0.
-	 * @param sharpAngleDeg  Interior angle (in degrees) below which a corner
-	 *                       is considered "sharp" and will be relaxed.
-	 *                       Defaults to 110°.
+	 * @param nets			 All nets in the design.  Referenced but not copied.
+	 * @param clearance		 Minimum clearance (in board units) that must be
+	 *						 maintained between segments belonging to different
+	 *						 nets.	Defaults to 4.0.
+	 * @param sharpAngleDeg	 Interior angle (in degrees) below which a corner
+	 *						 is considered "sharp" and will be relaxed.
+	 *						 Defaults to 110°.
 	 */
 	PcbPostProcessor(const std::vector<PcbNet>& nets,
 					 double clearance = 4.0,
@@ -73,8 +73,8 @@ public:
 	 * The input is not modified.  Each pass iterates to convergence (or up
 	 * to an internal iteration cap) before the next pass is applied.
 	 *
-	 * @param input  The raw routing result produced by the router.
-	 * @return       A new @c PcbRouteResult with improved wire geometry.
+	 * @param input	 The raw routing result produced by the router.
+	 * @return		 A new @c PcbRouteResult with improved wire geometry.
 	 */
 	PcbRouteResult process(const PcbRouteResult& input) {
 		WB_LOG << "[PostProcessor] Starting processing. Input wires: "
@@ -117,21 +117,20 @@ public:
 	}
 
 private:
-
 	/**
 	 * @brief Performs one full sharp-corner relaxation pass over the graph.
 	 *
 	 * Iterates over every node with degree ≥ 2 and inspects each pair of
-	 * incident edges.  If the angle between the two edges is sharper than
+	 * incident edges.	If the angle between the two edges is sharper than
 	 * @c cosThreshold_, either a chamfer (for degree-2 non-pad nodes) or a
 	 * Steiner point displacement (for junction nodes) is attempted.  The
 	 * operation is only committed if the resulting new segments maintain at
 	 * least @c minClearanceSq_ clearance from all other-net segments.
 	 *
-	 * @param netId    Zero-based ID of the net being processed (for logging).
-	 * @param g        The per-net routing graph.  Modified in-place.
+	 * @param netId	   Zero-based ID of the net being processed (for logging).
+	 * @param g		   The per-net routing graph.  Modified in-place.
 	 * @param allSegs  All segments across all nets, for clearance checks.
-	 * @return         True if at least one modification was made to the graph.
+	 * @return		   True if at least one modification was made to the graph.
 	 */
 	bool relaxSharpCorners(int netId,
 						   std::vector<GraphNode>& g,
@@ -184,22 +183,22 @@ private:
 	 * @brief Attempts to replace a degree-2 bend node with a chamfer segment.
 	 *
 	 * Two new nodes D and E are placed at distance @p L along the outgoing
-	 * edge directions from the bend node @p i.  The bend node is deactivated
-	 * and replaced by the edge D–E.  The operation is aborted if the new edge
+	 * edge directions from the bend node @p i.	 The bend node is deactivated
+	 * and replaced by the edge D–E.	The operation is aborted if the new edge
 	 * would violate the minimum clearance to any other-net segment.
 	 *
-	 * @param netId   Net ID for logging.
-	 * @param i       Index of the bend node.
-	 * @param u       Index of the first neighbour.
-	 * @param v       Index of the second neighbour.
-	 * @param vec1    Direction vector from i toward u (unnormalised).
-	 * @param vec2    Direction vector from i toward v (unnormalised).
-	 * @param l1      Length of vec1.
-	 * @param l2      Length of vec2.
-	 * @param L       Chamfer offset distance (fraction of the shorter edge).
-	 * @param g       Graph to modify.
+	 * @param netId	  Net ID for logging.
+	 * @param i		  Index of the bend node.
+	 * @param u		  Index of the first neighbour.
+	 * @param v		  Index of the second neighbour.
+	 * @param vec1	  Direction vector from i toward u (unnormalised).
+	 * @param vec2	  Direction vector from i toward v (unnormalised).
+	 * @param l1	  Length of vec1.
+	 * @param l2	  Length of vec2.
+	 * @param L		  Chamfer offset distance (fraction of the shorter edge).
+	 * @param g		  Graph to modify.
 	 * @param allSegs Global segments for clearance checks.
-	 * @return        True if the chamfer was successfully applied.
+	 * @return		  True if the chamfer was successfully applied.
 	 */
 	bool tryChamferCorner(int netId,
 						  int i, int u, int v,
@@ -246,27 +245,27 @@ private:
 	 * @brief Attempts to displace a junction node outward along the bisector.
 	 *
 	 * A new Steiner point J is computed at distance @p L along the normalised
-	 * sum of the two incident edge directions.  The original node @p i is
+	 * sum of the two incident edge directions.	 The original node @p i is
 	 * detached from neighbours @p u and @p v (but remains connected to any
 	 * remaining neighbours), and all three — i, u, v — are re-connected to J.
 	 * The operation is aborted if any of the three new sub-segments would
 	 * violate the minimum clearance.
 	 *
-	 * @param netId   Net ID for logging.
-	 * @param i       Index of the junction node.
-	 * @param u       Index of the first neighbour involved in the sharp angle.
-	 * @param v       Index of the second neighbour involved in the sharp angle.
-	 * @param p       Position of node i.
-	 * @param pu      Position of node u.
-	 * @param pv      Position of node v.
-	 * @param vec1    Direction vector from i toward u (unnormalised).
-	 * @param vec2    Direction vector from i toward v (unnormalised).
-	 * @param l1      Length of vec1.
-	 * @param l2      Length of vec2.
-	 * @param L       Displacement distance for J.
-	 * @param g       Graph to modify.
+	 * @param netId	  Net ID for logging.
+	 * @param i		  Index of the junction node.
+	 * @param u		  Index of the first neighbour involved in the sharp angle.
+	 * @param v		  Index of the second neighbour involved in the sharp angle.
+	 * @param p		  Position of node i.
+	 * @param pu	  Position of node u.
+	 * @param pv	  Position of node v.
+	 * @param vec1	  Direction vector from i toward u (unnormalised).
+	 * @param vec2	  Direction vector from i toward v (unnormalised).
+	 * @param l1	  Length of vec1.
+	 * @param l2	  Length of vec2.
+	 * @param L		  Displacement distance for J.
+	 * @param g		  Graph to modify.
 	 * @param allSegs Global segments for clearance checks.
-	 * @return        True if the Steiner point was successfully injected.
+	 * @return		  True if the Steiner point was successfully injected.
 	 */
 	bool tryInjectSteinerJunction(int netId,
 								  int i, int u, int v,
@@ -320,12 +319,12 @@ private:
 	 * @brief Converts the refined per-net graphs back into a @c PcbRouteResult.
 	 *
 	 * Traverses each graph and emits one wire per maximal chain of degree-2
-	 * nodes, avoiding duplicate edges via a visited-edge map.  Nodes with
+	 * nodes, avoiding duplicate edges via a visited-edge map.	Nodes with
 	 * degree ≥ 3 are also recorded as junctions.
 	 *
-	 * @param netGraphs  Refined per-net graphs.
-	 * @param netNames   Net name for each graph index.
-	 * @return           Serialised @c PcbRouteResult.
+	 * @param netGraphs	 Refined per-net graphs.
+	 * @param netNames	 Net name for each graph index.
+	 * @return			 Serialised @c PcbRouteResult.
 	 */
 	PcbRouteResult serialiseGraphs(
 			const std::vector<std::vector<GraphNode>>& netGraphs,
