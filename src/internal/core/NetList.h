@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Debug.h"
 #include "NetPin.h"
 #include "WireBenderTypes.h"
 #include "bend/utils.h"
@@ -252,6 +253,55 @@ private:
 		classifyNets();
 		computeBusOrder();
 		processOverrides(classificationOverride);
+#ifdef WB_DEBUG
+		if(!classificationOverride.empty()) {
+			WB_LOG << "Classification Overrides:\n";
+			for(const auto& o: classificationOverride) {
+				WB_LOG << "\t" << o.name << " level:" << o.busLevel << " isBus:" << o.isBus << " isGround:" << o.isGround << " isPositive:" << o.isPositive << "\n";
+			}
+		}
+		WB_LOG << "Buses: ";
+		bool first = true;
+		for(const auto& b: buses) {
+			if(!first) {
+				WB_LOG << ", ";
+			} else {
+				first = false;
+			}
+			WB_LOG << b;
+		}
+		WB_LOG << ".\nBus Levels: ";
+		first = true;
+		for(const auto& [k, v]: busLevels) {
+			if(!first) {
+				WB_LOG << ", ";
+			} else {
+				first = false;
+			}
+			WB_LOG << k << ':' << v;
+		}
+		WB_LOG << ".\nBus sorted: ";
+		first = true;
+		for(const auto& b: busNamesSorted) {
+			if(!first) {
+				WB_LOG << ", ";
+			} else {
+				first = false;
+			}
+			WB_LOG << b;
+		}
+		WB_LOG << ".\nSignals: ";
+		first = true;
+		for(const auto& s: signals) {
+			if(!first) {
+				WB_LOG << ", ";
+			} else {
+				first = false;
+			}
+			WB_LOG << s;
+		}
+		WB_LOG << ".\nGND: " << gndName << ".\n";
+#endif
 	}
 
 	/**

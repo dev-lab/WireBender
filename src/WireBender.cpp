@@ -50,6 +50,14 @@ static SchematicRouteResult toRouteResult(const RoutingResult& rr) {
  */
 class WireBenderImpl {
 public:
+	WireBenderImpl() {
+		WB_LOG << "[WireBender] initialized\n";
+	}
+
+	~WireBenderImpl() {
+		WB_LOG << "[WireBender] destroyed\n";
+	}
+
 	/**
 	 * Ensure classification is up to date.
 	 */
@@ -64,6 +72,16 @@ public:
 	void applyClassification(const std::vector<NetClassification>& userClassification) {
 		classification = userClassification;
 		classificationDiff = NetClassifier::classifyDiff(netlist, classification);
+#ifdef WB_DEBUG
+		WB_LOG << "User classification:\n";
+		for(const auto& o: userClassification) {
+			WB_LOG << "\t" << o.name << " level:" << o.busLevel << " isBus:" << o.isBus << " isGround:" << o.isGround << " isPositive:" << o.isPositive << "\n";
+		}
+		WB_LOG << "Apply classification diff:\n";
+		for(const auto& o: classificationDiff) {
+			WB_LOG << "\t" << o.name << " level:" << o.busLevel << " isBus:" << o.isBus << " isGround:" << o.isGround << " isPositive:" << o.isPositive << "\n";
+		}
+#endif
 		classificationApplied = true;
 	}
 
@@ -156,7 +174,6 @@ void WireBender::addComponent(const ComponentDescriptor& comp) {
 	}
 
 	// Invalidate downstream state
-	impl->classificationApplied = false;
 	impl->routed = false;
 }
 
@@ -172,7 +189,6 @@ void WireBender::addNet(const NetDescriptor& net) {
 		nets.push_back(net);
 	}
 
-	impl->classificationApplied = false;
 	impl->routed = false;
 }
 
