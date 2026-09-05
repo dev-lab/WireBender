@@ -17,14 +17,14 @@ jobs:
     steps:
       - name: "CLA Assistant"
         if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event.pull_request
-        uses: cla-assistant/github-action@v2.5.1
+        uses: cla-assistant/github-action@v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_SIGNATURE_PAT }}
         with:
           path-to-signatures: 'WireBender-signatures.json'
-          path-to-cla: 'https://github.com/dev-lab/WireBender/blob/main/CLA.md'
+          path-to-document: 'https://github.com/dev-lab/WireBender/blob/main/CLA.md'
           remote-organization-name: 'dev-lab'
           remote-repository-name: 'dev-lab-cla-signatures'
           branch: 'main'
-          allowlist: 'bot*,'
+          allowlist: 'bot*'
